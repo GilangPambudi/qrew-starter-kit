@@ -13,7 +13,7 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
-    protected $primaryKey = 'user_id'; 
+    protected $primaryKey = 'user_id';
 
     /**
      * The attributes that are mass assignable.
@@ -50,5 +50,10 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function getKeyName()
+    {
+        return 'user_id';
     }
 }
