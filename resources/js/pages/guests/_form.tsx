@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Guest, Invitation } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,38 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { CheckCircle, AlertCircle } from 'lucide-react';
 import { Form, Link } from '@inertiajs/react';
+
+// Phone number normalization function (sama seperti di SKRIPSI)
+const normalizePhoneNumber = (phoneNumber: string): string | null => {
+  // Remove all non-numeric characters
+  let phone = phoneNumber.replace(/[^0-9]/g, '');
+  
+  if (phone.length === 0) return null;
+  
+  // Handle different formats
+  if (phone.startsWith('620')) {
+    // 6208xxx -> 628xxx
+    phone = '62' + phone.substring(3);
+  } else if (phone.startsWith('62')) {
+    // Already in 62xxx format - no change needed
+  } else if (phone.startsWith('0')) {
+    // 08xxx -> 628xxx
+    phone = '62' + phone.substring(1);
+  } else if (phone.startsWith('8')) {
+    // 8xxx -> 628xxx
+    phone = '62' + phone;
+  } else {
+    // Other formats, prepend 62
+    phone = '62' + phone;
+  }
+  
+  // Validate final format (should be 62 followed by 8-13 digits)
+  if (!/^62[0-9]{8,13}$/.test(phone)) {
+    return null; // Invalid format
+  }
+  
+  return phone;
+};
 
 type Props = {
   action: string;
@@ -34,52 +66,51 @@ export default function GuestForm({
   method,
   submitLabel = 'Save',
   cancelHref = '/guests',
-  invitation,
   guest,
   categories,
   attendanceStatuses,
   invitationStatuses,
   isEdit = false,
 }: Props) {
-  const [phonePreview, setPhonePreview] = useState('');
-  const [phoneValid, setPhoneValid] = useState(true);
-  const [showCustomCategory, setShowCustomCategory] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(guest?.guest_category || '');
-
-  // Phone number normalization function (sama seperti di SKRIPSI)
-  const normalizePhoneNumber = (phoneNumber: string): string | null => {
-    // Remove all non-numeric characters
-    let phone = phoneNumber.replace(/[^0-9]/g, '');
-    
-    if (phone.length === 0) return null;
-    
-    // Handle different formats
-    if (phone.startsWith('620')) {
-      // 6208xxx -> 628xxx
-      phone = '62' + phone.substring(3);
-    } else if (phone.startsWith('62')) {
-      // Already in 62xxx format
-      phone = phone;
-    } else if (phone.startsWith('0')) {
-      // 08xxx -> 628xxx
-      phone = '62' + phone.substring(1);
-    } else if (phone.startsWith('8')) {
-      // 8xxx -> 628xxx
-      phone = '62' + phone;
-    } else {
-      // Other formats, prepend 62
-      phone = '62' + phone;
+  const [phonePreview, setPhonePreview] = useState(() => {
+    if (isEdit && guest?.guest_contact) {
+      const normalized = normalizePhoneNumber(guest.guest_contact);
+      if (normalized) {
+        return `Preview: ${normalized} (WhatsApp compatible)`;
+      } else {
+        return 'Invalid phone number format';
+      }
     }
-    
-    // Validate final format (should be 62 followed by 8-13 digits)
-    if (!/^62[0-9]{8,13}$/.test(phone)) {
-      return null; // Invalid format
+    return '';
+  });
+  const [phoneValid, setPhoneValid] = useState(() => {
+    if (isEdit && guest?.guest_contact) {
+      const normalized = normalizePhoneNumber(guest.guest_contact);
+      return normalized !== null;
     }
-    
-    return phone;
-  };
+    return true;
+  });
+  const [showCustomCategory, setShowCustomCategory] = useState(() => {
+    if (isEdit && guest?.guest_category) {
+      const categoryExists = Object.keys(categories).includes(guest.guest_category);
+      return !categoryExists && guest.guest_category !== 'not_specified';
+    }
+    return false;
+  });
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    if (isEdit && guest?.guest_category) {
+      const categoryExists = Object.keys(categories).includes(guest.guest_category);
+      if (!categoryExists && guest.guest_category !== 'not_specified') {
+        return 'custom';
+      }
+      return guest.guest_category;
+    }
+    return '';
+  });
 
-  const handlePhoneChange = (phoneNumber: string) => {
+
+
+  const handlePhoneChange = useCallback((phoneNumber: string) => {
     if (phoneNumber.trim() === '') {
       setPhonePreview('');
       setPhoneValid(true);
@@ -94,25 +125,9 @@ export default function GuestForm({
       setPhonePreview('Invalid phone number format');
       setPhoneValid(false);
     }
-  };
+  }, []);
 
-  // Initialize phone preview for edit mode
-  useEffect(() => {
-    if (isEdit && guest?.guest_contact) {
-      handlePhoneChange(guest.guest_contact);
-    }
-  }, [isEdit, guest?.guest_contact]);
 
-  // Initialize category state for edit mode
-  useEffect(() => {
-    if (isEdit && guest?.guest_category) {
-      const categoryExists = Object.keys(categories).includes(guest.guest_category);
-      if (!categoryExists && guest.guest_category !== 'not_specified') {
-        setShowCustomCategory(true);
-        setSelectedCategory('custom');
-      }
-    }
-  }, [isEdit, guest?.guest_category, categories]);
 
   return (
     <Form method={method} action={action} options={{ preserveScroll: true }} className="max-w-2xl space-y-6">

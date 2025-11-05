@@ -12,9 +12,7 @@ import {
     Heart,
     Gift,
     MapPin,
-    Clock,
-    Filter,
-    Download
+    Clock
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
@@ -58,7 +56,7 @@ interface InvitationData {
 
 interface InvitationsIndexProps {
     auth: {
-        user: any;
+        user: { id: number; name: string; email: string };
     };
     flash?: {
         success?: string;
@@ -72,7 +70,7 @@ interface InvitationsIndexProps {
         last_page: number;
         per_page: number;
         total: number;
-        links: any[];
+        links: Array<{ url: string | null; label: string; active: boolean }>;
     };
     filters: {
         search?: string;
@@ -97,13 +95,7 @@ export default function InvitationsIndex({ invitations, filters }: InvitationsIn
         });
     };
     
-    const handleSort = (column: string) => {
-        const direction = filters.sort === column && filters.direction === 'asc' ? 'desc' : 'asc';
-        router.get('/invitations', { ...filters, sort: column, direction }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
+
     
     const handleDelete = (invitation: InvitationData) => {
         if (confirm(`Are you sure you want to delete "${invitation.wedding_name}"?`)) {

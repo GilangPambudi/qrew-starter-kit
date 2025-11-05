@@ -1,93 +1,80 @@
 import { router } from '@inertiajs/react';
-import { SortingState } from '@tanstack/react-table';
-import { useCallback, useState } from 'react';
+import type { SortingState } from '@tanstack/react-table';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-interface UseIndexListOptions {
-    initialSort?: string;
-    initialDir?: 'asc' | 'desc';
-    initialPerPage?: number;
-    initialQ?: string;
-}
+type Dir = 'asc' | 'desc';
+type Initial = { q?: string; per_page?: number; sort?: string; dir?: Dir };
 
-export function useIndexList(
-    routeName: string,
-    routeParams?: any,
-    initialFilters?: any,
-    getExtraFilters?: () => Record<string, any>
-) {
-    const [q, setQ] = useState(initialFilters?.q || '');
-    const [perPage, setPerPage] = useState(initialFilters?.per_page || 10);
+export function useIndexList(routeName: string, routeParams?: string, initial?: Initial, getExtra?: () => Record<string, unknown> | undefined) {
+    const [q, setQ] = useState(initial?.q ?? '');
+    const [perPage, setPerPage] = useState<number>(Number(initial?.per_page ?? 10));
+    const [sorting, setSorting] = useState<SortingState>(
+        initial?.sort ? [{ id: String(initial.sort), desc: (initial.dir ?? 'asc') === 'desc' }] : [],
+    );
     const [loading, setLoading] = useState(false);
-    
-    const [sorting, setSorting] = useState<SortingState>([
-        {
-            id: initialFilters?.sort || 'created_at',
-            desc: initialFilters?.dir === 'desc'
-        }
-    ]);
 
-    const submit = useCallback((page: number = 1, extraFilters: Record<string, any> = {}) => {
-        setLoading(true);
-        
-        const sortColumn = sorting[0]?.id || 'created_at';
-        const sortDirection = sorting[0]?.desc ? 'desc' : 'asc';
-        
-        const filters: Record<string, any> = {
-            q: q || undefined,
-            per_page: perPage,
-            sort: sortColumn,
-            dir: sortDirection,
-            page,
-            ...extraFilters,
-            ...(getExtraFilters ? getExtraFilters() : {}),
-        };
+    const getExtraRef = useRef(getExtra);
 
-        // Remove undefined values
-        Object.keys(filters).forEach(key => {
-            if (filters[key] === undefined || filters[key] === '') {
-                delete filters[key];
-            }
-        });
+    useEffect(() => {
+        getExtraRef.current = getExtra;
+    }, [getExtra]);
 
-        let url: string;
-        if (routeParams) {
-            // For nested routes like guests.show
-            if (typeof routeParams === 'object') {
-                url = `/${routeName.replace('.', '/')}/${Object.values(routeParams).join('/')}`;
-            } else {
-                url = `/${routeName.replace('.', '/')}/${routeParams}`;
-            }
-        } else {
-            url = `/${routeName.replace('.', '/')}`;
-        }
+    const baseParams = useMemo(() => {
+        const sort = sorting[0]?.id;
+        const dir: Dir = sorting[0]?.desc ? 'desc' : 'asc';
+        return { ...(sort ? { sort, dir } : {}) };
+    }, [sorting]);
 
-        router.get(url, filters, {
-            preserveState: true,
-            preserveScroll: true,
-            onFinish: () => setLoading(false),
-        });
-    }, [q, perPage, sorting, routeName, routeParams, getExtraFilters]);
-
-    const onSortingChange = useCallback((newSorting: SortingState) => {
-        setSorting(newSorting);
-        
-        // Auto submit when sorting changes
-        setTimeout(() => {
-            const sortColumn = newSorting[0]?.id || 'created_at';
-            const sortDirection = newSorting[0]?.desc ? 'desc' : 'asc';
+    const submit = useCallback(
+        (page = 1, extra?: Record<string, unknown>) => {
+            const url = routeParams ? `/${routeName}/${routeParams}` : `/${routeName}`;
             
-            submit(1, { sort: sortColumn, dir: sortDirection });
-        }, 0);
-    }, [submit]);
+            router.get(
+                url,
+                {
+                    q: q,
+                    per_page: perPage,
+                    page,
+                    ...(getExtraRef.current ? getExtraRef.current() : {}),
+                    ...baseParams,
+                    ...(extra ?? {}),
+                },
+                {
+                    preserveScroll: true,
+                    preserveState: true,
+                    onStart: () => setLoading(true),
+                    onFinish: () => setLoading(false),
+                },
+            );
+        },
+        [q, perPage, baseParams, routeName, routeParams],
+    );
 
-    return {
-        q,
-        setQ,
-        perPage,
-        setPerPage,
-        sorting,
-        submit,
-        onSortingChange,
-        loading,
+    // Disable auto-submit for search to prevent unwanted redirects
+
+    const onSortingChange = (next: SortingState) => {
+        setSorting(next);
+        const sort = next[0]?.id;
+        const dir: Dir = next[0]?.desc ? 'desc' : 'asc';
+        const url = routeParams ? `/${routeName}/${routeParams}` : `/${routeName}`;
+        
+        router.get(
+            url,
+            {
+                q: q,
+                per_page: perPage,
+                page: 1,
+                ...(getExtra ? getExtra() : {}),
+                ...(sort ? { sort, dir } : {}),
+            },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onStart: () => setLoading(true),
+                onFinish: () => setLoading(false),
+            },
+        );
     };
+
+    return { q, setQ, perPage, setPerPage, sorting, submit, onSortingChange, loading };
 }

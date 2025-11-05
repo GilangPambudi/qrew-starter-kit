@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Guest, Invitation, type BreadcrumbItem } from '@/types';
+import { Guest, Invitation } from '@/types';
 import AppLayout from '@/layouts/app-layout';
 import GuestForm from './_form';
 

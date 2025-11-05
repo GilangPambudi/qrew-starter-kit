@@ -1,11 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, Users, Search } from 'lucide-react';
+import { Users, Search } from 'lucide-react';
 import { Invitation } from '@/types';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Pagination,
@@ -50,19 +49,7 @@ export default function GuestsIndex({
     router.get('/guests', { ...filters, search: search, page: 1 }, { preserveState: true });
   };
 
-  const handleSort = (column: string) => {
-    const newDirection = filters.sort === column && filters.direction === 'asc' ? 'desc' : 'asc';
-    router.get(
-      '/guests',
-      { ...filters, sort: column, direction: newDirection, page: 1 },
-      { preserveState: true }
-    );
-  };
 
-  const getSortIcon = (column: string) => {
-    if (filters.sort !== column) return null;
-    return filters.direction === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />;
-  };
 
   const breadcrumbs = [
     { title: 'Dashboard', href: '/dashboard' },

@@ -18,13 +18,7 @@ import Heading from '@/components/heading';
 import { toast } from 'sonner';
 import { columns } from './columns';
 
-type Paginator<T> = {
-    data: T[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-};
+
 
 interface GuestsShowProps {
     invitation: Invitation;
@@ -73,13 +67,13 @@ export default function GuestsShow({
 
     const { q, setQ, perPage, setPerPage, sorting, submit, onSortingChange, loading } = useIndexList(
         'guests', 
-        invitation.invitation_id, 
-        filters, 
-        () => ({
-            guest_category: categoryFilter !== 'all' ? categoryFilter : undefined,
-            attendance_status: attendanceFilter !== 'all' ? attendanceFilter : undefined,
-            invitation_status: invitationFilter !== 'all' ? invitationFilter : undefined,
-        })
+        invitation.invitation_id.toString(), 
+        {
+            q: filters?.q,
+            per_page: filters?.per_page,
+            sort: filters?.sort,
+            dir: filters?.dir as 'asc' | 'desc' | undefined,
+        }
     );
 
     useEffect(() => {
@@ -87,9 +81,29 @@ export default function GuestsShow({
         if (flash?.error) toast.error(flash.error);
     }, [flash?.success, flash?.error]);
 
-    useEffect(() => {
-        submit(1);
-    }, [categoryFilter, attendanceFilter, invitationFilter]);
+    // Handler untuk submit filter - hanya dipanggil saat user mengubah filter
+    const handleFilterChange = (filterType: string, value: string) => {
+        const extraFilters: Record<string, unknown> = {};
+        
+        if (filterType === 'category') {
+            setCategoryFilter(value);
+            extraFilters.guest_category = value !== 'all' ? value : undefined;
+        } else if (filterType === 'attendance') {
+            setAttendanceFilter(value);
+            extraFilters.attendance_status = value !== 'all' ? value : undefined;
+        } else if (filterType === 'invitation') {
+            setInvitationFilter(value);
+            extraFilters.invitation_status = value !== 'all' ? value : undefined;
+        }
+        
+        // Include other current filter values
+        extraFilters.guest_category = extraFilters.guest_category ?? (categoryFilter !== 'all' ? categoryFilter : undefined);
+        extraFilters.attendance_status = extraFilters.attendance_status ?? (attendanceFilter !== 'all' ? attendanceFilter : undefined);
+        extraFilters.invitation_status = extraFilters.invitation_status ?? (invitationFilter !== 'all' ? invitationFilter : undefined);
+        
+        // Submit dengan filter yang baru
+        submit(1, extraFilters);
+    };
 
     const breadcrumbs = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -102,9 +116,7 @@ export default function GuestsShow({
             <div className="flex w-full flex-col gap-1 lg:w-56">
                 <Select
                     value={categoryFilter}
-                    onValueChange={(v) => {
-                        setCategoryFilter(v);
-                    }}
+                    onValueChange={(v) => handleFilterChange('category', v)}
                 >
                     <SelectTrigger>
                         <SelectValue placeholder="All Categories" />
@@ -123,9 +135,7 @@ export default function GuestsShow({
             <div className="flex w-full flex-col gap-1 lg:w-56">
                 <Select
                     value={attendanceFilter}
-                    onValueChange={(v) => {
-                        setAttendanceFilter(v);
-                    }}
+                    onValueChange={(v) => handleFilterChange('attendance', v)}
                 >
                     <SelectTrigger>
                         <SelectValue placeholder="All Status" />
@@ -144,9 +154,7 @@ export default function GuestsShow({
             <div className="flex w-full flex-col gap-1 lg:w-56">
                 <Select
                     value={invitationFilter}
-                    onValueChange={(v) => {
-                        setInvitationFilter(v);
-                    }}
+                    onValueChange={(v) => handleFilterChange('invitation', v)}
                 >
                     <SelectTrigger>
                         <SelectValue placeholder="All Status" />

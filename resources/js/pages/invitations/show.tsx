@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -51,14 +51,30 @@ interface InvitationData {
     wedding_maps?: string;
     wedding_image?: string;
     created_at: string;
-    guests: any[];
-    wishes: any[];
-    payments: any[];
+    guests: Array<{
+        guest_id: number;
+        guest_name: string;
+        guest_category: string;
+        guest_contact: string;
+        guest_attendance_status: string;
+    }>;
+    wishes: Array<{
+        wish_id: number;
+        message: string;
+        guest?: { guest_name: string };
+    }>;
+    payments: Array<{
+        payment_id: number;
+        order_id: string;
+        gross_amount: number;
+        payment_status: string;
+        guest?: { guest_name: string };
+    }>;
 }
 
 interface InvitationShowProps {
     auth: {
-        user: any;
+        user: { id: number; name: string; email: string };
     };
     flash?: {
         success?: string;
@@ -106,7 +122,7 @@ export default function InvitationShow({ invitation, stats }: InvitationShowProp
         try {
             await navigator.clipboard.writeText(invitationUrl);
             toast.success('Invitation URL copied to clipboard!');
-        } catch (err) {
+        } catch {
             toast.error('Failed to copy URL');
         }
     };
@@ -303,7 +319,7 @@ export default function InvitationShow({ invitation, stats }: InvitationShowProp
                                 </div>
 
                                 <div className="grid gap-4">
-                                    {invitation.guests.slice(0, 5).map((guest: any) => (
+                                    {invitation.guests.slice(0, 5).map((guest) => (
                                         <Card key={guest.guest_id}>
                                             <CardContent className="flex items-center justify-between p-4">
                                                 <div>
@@ -361,7 +377,7 @@ export default function InvitationShow({ invitation, stats }: InvitationShowProp
                                 </div>
 
                                 <div className="space-y-4">
-                                    {invitation.wishes.slice(0, 5).map((wish: any) => (
+                                    {invitation.wishes.slice(0, 5).map((wish) => (
                                         <Card key={wish.wish_id}>
                                             <CardContent className="p-4">
                                                 <div className="flex items-start justify-between">
@@ -371,7 +387,7 @@ export default function InvitationShow({ invitation, stats }: InvitationShowProp
                                                             — {wish.guest?.guest_name || 'Anonymous'}
                                                         </p>
                                                     </div>
-                                                    <Heart className="h-4 w-4 text-pink-500 ml-2 flex-shrink-0" />
+                                                    <Heart className="h-4 w-4 text-pink-500 ml-2 shrink-0" />
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -398,7 +414,7 @@ export default function InvitationShow({ invitation, stats }: InvitationShowProp
                                 </div>
 
                                 <div className="space-y-4">
-                                    {invitation.payments.slice(0, 5).map((payment: any) => (
+                                    {invitation.payments.slice(0, 5).map((payment) => (
                                         <Card key={payment.payment_id}>
                                             <CardContent className="flex items-center justify-between p-4">
                                                 <div>

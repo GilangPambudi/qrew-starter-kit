@@ -15,7 +15,7 @@ import {
 import { Guest } from '@/types';
 import { Link, router } from '@inertiajs/react';
 import { ColumnDef, type Row } from '@tanstack/react-table';
-import { ArrowUpDown, Edit, Trash2, Copy } from 'lucide-react';
+import { ArrowUpDown, Edit, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
